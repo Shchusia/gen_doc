@@ -82,6 +82,7 @@ class BuildDocumentation:
         :return:
         """
         res = self.parser.parse_args()
+        print(res)
         data = {
             key: getattr(res, key)
             for key in dir(res) if key[0] != '_' and key != 'lang'
@@ -98,6 +99,8 @@ def main() -> None:
     try:
         builder = BuildDocumentation(sys.argv)
         builder.execute()
+    except SystemExit:
+        pass
     except Exception as exc:
         traceback.print_exc()
 
