@@ -4,7 +4,7 @@
 
 ## Variable assignment
 
-+ `CONST_VAL` = first_test_const_value: str
++ `CONST_VAL` = 'first_test_const_value': str
 
 + `CONST_VAL_SECOND` = {'value': 1}: dict
 
@@ -12,11 +12,11 @@
 
 ### **Arguments**:
 
-+ `arg1`: None
++ `arg1`: unknown
 
-+ `arg2`: None
++ `arg2`: unknown
 
-+ `arg3`: None
++ `arg3`: unknown
 
 #### Declared returns: `List[Dict]`
 
@@ -24,7 +24,7 @@
 
 #### **Arguments**:
 
-+ `function`: None
++ `function`: unknown
 
 #### Function `wrapper`
 
@@ -36,7 +36,14 @@
 
 ### **Arguments**:
 
- + `arg`: `None` - empty description
+ + `arg`: `unknown` - empty description
+
+### **Examples**:
+
+ ```python
+ >>> test_func(123)
+None 
+```
 
 #### Decorators
 
@@ -48,9 +55,13 @@
 
 #### Class variables
 
-+ `_value` = example: str
++ `_value` = 'example': str
 
 ### Function `ExampleClass.value`
+
+ ``` 
+ property value 
+ ```
 
 ##### Decorators
 
@@ -64,7 +75,7 @@
 
 #### **Arguments**:
 
- + `value`: `None` - empty description
+ + `value`: `unknown` - empty description
 
 ##### Decorators
 
@@ -108,6 +119,6 @@
 
 #### **Arguments**:
 
- + `arg`: `None` - empty description
+ + `arg`: `unknown` - empty description
 
 ##### Declared returns: `int`

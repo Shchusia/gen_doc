@@ -1,5 +1,6 @@
 """
 Example file on how to document a file
+to run `gen_doc py -o true`
 """
 from abc import ABC, abstractmethod
 from typing import List, Dict
@@ -32,6 +33,9 @@ def test_func(arg, *args, **kwargs) -> List[Dict]:
     :param args:
     :param kwargs:
     :return:
+    :example:
+    >>> test_func(123)
+    None
     """
     pass
 
@@ -42,7 +46,7 @@ class ExampleClass(ABC):
     @property
     def value(self):
         """
-
+        property value
         :return:
         """
         return self._value
@@ -79,3 +83,4 @@ class ExampleClass(ABC):
         :return:
         """
         pass
+
