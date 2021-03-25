@@ -39,6 +39,7 @@ setup(name=LIB_NAME,
       url='https://github.com/Shchusia/gen_doc',
       packages=get_packages(),
       keywords=['pip', MODULE_NAME],
+      python_requires='>=3.7',
       entry_points={
           'console_scripts': [
               'gen_doc=gen_doc.commands:main'
