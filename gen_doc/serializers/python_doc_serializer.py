@@ -70,9 +70,17 @@ class PythonDocSerializer:
         """
         documentation = list()
         for assign_data in assigns_data:
+            try:
+                val = PythonDocSerializer.new_build_type_assigns(assign_data['value'])
+            except:
+                val = assign_data['value']
+            if assign_data['type'] == 'str':
+                val = f"'{val}'"
+            elif assigns_data['type'] == 'list':
+                val = f"[{val}]"
             row = f"+ `{assign_data['name_variable']}`" \
-                  f"{': ' + assign_data['declared_type'] if assign_data.get('declared_type') else ''} = " \
-                  f"{PythonDocSerializer.build_type_assigns(assign_data['value'])}: {assign_data['type']}"
+                  f"{': ' + PythonDocSerializer.new_build_type_assigns(assign_data['declared_type']) if assign_data.get('declared_type') else ''} = " \
+                  f"{val}: {assign_data['type']}"
             documentation.append(row)
         if documentation:
             row = '#' * deep + f' {title}'
@@ -199,51 +207,6 @@ class PythonDocSerializer:
             data_decorators.insert(0,
                                    '#' * (deep + 2) + ' ' + 'Decorators')
         return data_decorators
-
-    @staticmethod
-    def build_type(data):
-        """
-        Method for build types methods
-        :param data:
-        :return:
-        """
-        if not isinstance(data, Iterable):
-            return str(data)
-        if isinstance(data, str):
-            return data
-        _type = data['value']
-        if data.get('sub_value'):
-            if isinstance(data['sub_value'], dict):
-                _type += f"[{PythonDocSerializer.build_type(data['sub_value'])}]"
-            elif isinstance(data['sub_value'], list):
-                types = [
-                    PythonDocSerializer.build_type(v)
-                    for v in data['sub_value']
-                ]
-                _type += f'[{",".join(types)}]'
-            else:
-                _type += f'[{data["sub_value"]}]'
-        return _type
-
-    @staticmethod
-    def build_type_assigns(data):
-        """
-        Method for build types assigns
-        :param data:
-        :return:
-        """
-        if isinstance(data, str):
-            return data
-        if not isinstance(data, Iterable):
-            return str(data)
-
-        if isinstance(data, list):
-            return "[{}]".format(','.join(["'{}'".format(d['value']) for d in data]))
-        elif isinstance(data, dict):
-            if data.get('type') and data['type'] == 'object':
-                return f"{data['value']}()"
-            return str(data)
-        return 'unknown'
 
     @staticmethod
     def serialize_doc_string_comment(doc_string,
@@ -382,3 +345,60 @@ class PythonDocSerializer:
                     .strip()
                 rows.append(f" ```python\n {_row} \n```")
         return rows
+
+    @staticmethod
+    def build_type(data):
+        if isinstance(data, dict):
+            _type = data.get('value')
+            resp = list()
+            if data.get('sub_value'):
+                resp = PythonDocSerializer.build_type(data['sub_value'])
+            return f'{_type}[{resp}]'
+        elif isinstance(data, list):
+            types = [
+                PythonDocSerializer.build_type(v['value'])
+                for v in data
+            ]
+            return f'{",".join(types)}'
+        elif isinstance(data, str):
+            return data
+        else:
+            return ''
+
+    @staticmethod
+    def new_build_type_assigns(data):
+        """
+        Method for build types assigns
+        :param data:
+        :return:
+        """
+        try:
+            if isinstance(data, str):
+                return data
+            if not isinstance(data, Iterable):
+                return str(data)
+
+            if isinstance(data, list):
+                return "{}".format(','.join(["{}".format(PythonDocSerializer.new_build_type_assigns(d['value']))
+                                             if d['type'] != 'str'
+                                             else "'{}'".format(PythonDocSerializer.new_build_type_assigns(d['value']))
+                                             for d in data]))
+            elif isinstance(data, dict):
+                if data.get('type') and data['type'] == 'object':
+                    args = ''
+                    keywords = ''
+                    if data.get('args'):
+                        args = PythonDocSerializer.new_build_type_assigns(data.get('args'))
+                    if data.get('keywords'):
+                        tmp = list()
+                        for keyword in keywords:
+                            _tmp = PythonDocSerializer.new_build_type_assigns(keyword['_value'])
+                            tmp.append(f'{keyword["name"]}={_tmp}')
+                        if tmp:
+                            keywords = ' ,' + ','.join(tmp)
+
+                    return f"{data['value']}({args}{keywords})"
+                return str(data)
+            return 'unknown'
+        except:
+            return data

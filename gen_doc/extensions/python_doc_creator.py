@@ -17,7 +17,7 @@ arguments_to_ignore = [
 ]
 
 
-class  PythonDocGenerator(DocGenerator):
+class PythonDocGenerator(DocGenerator):
     """
     Class for retrieving information about python module
     """
@@ -110,7 +110,7 @@ class  PythonDocGenerator(DocGenerator):
                 'name_variable': obj.target.id,
                 'value': _value,
                 'type': _type,
-                'declared_type': obj.annotation.id,
+                'declared_type': self._get_value(obj.annotation),
             }
         ]
 
@@ -244,7 +244,10 @@ class  PythonDocGenerator(DocGenerator):
             return resp, 'list' if isinstance(obj, ast.List) else 'tuple'
         elif isinstance(obj, ast.Subscript):
             _value, _type = self._get_value(obj.value)
-            sub_value, sub_type = self._get_value(obj.slice.value)
+            try:
+                sub_value, sub_type = self._get_value(obj.slice.value)
+            except:
+                sub_value, sub_type = self._get_value(obj.slice)
             data = {
                 'value': _value,
                 'type': _type,
@@ -252,8 +255,21 @@ class  PythonDocGenerator(DocGenerator):
                 'sub_value': sub_value
             }
             return data, 'subscript'
+        elif isinstance(obj, ast.Attribute):
+            val_1, type1 = self._get_value(obj.value)
+            if isinstance(val_1, str):
+                val = f'{val_1}.{obj.attr}'
+            else:
+                val = val_1
+
+            return val, type1
+        elif isinstance(obj, ast.Slice):
+            lower = obj.lower if obj.lower else ''
+            upper = obj.upper if obj.upper else ''
+            step = obj.step if obj.step else ''
+            return f"{lower}:{upper}:{step}", 'slice'
         elif isinstance(obj, ast.Call):
-            _value, _type = self._get_value(obj.func)
+            _base_value, _base_type = self._get_value(obj.func)
 
             args = list()
             keywords = list()
@@ -272,8 +288,8 @@ class  PythonDocGenerator(DocGenerator):
                     'type': _type
                 })
             data = {
-                'value': _value,
-                'type': _type,
+                'value': _base_value,
+                'type': _base_type,
                 'keywords': keywords,
                 'args': args
             }
