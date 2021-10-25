@@ -10,6 +10,7 @@ import traceback
 from typing import Dict
 
 import gen_doc.extensions as extensions
+from gen_doc import __version__
 
 
 def get_extensions() -> Dict:
@@ -19,7 +20,7 @@ def get_extensions() -> Dict:
     """
     _val = dict()
     for _, clazz in inspect.getmembers(extensions,
-                                                inspect.isclass):
+                                       inspect.isclass):
         if _val.get(clazz.short_name):
             raise ValueError('not unique command')
         _val[clazz.short_name] = clazz
@@ -73,6 +74,7 @@ class BuildDocumentation:
         parser.add_argument('-o', '--overwrite_if_file_exists',
                             required=False, default=False,
                             help='for overwriting if file exist')
+        parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + __version__)
 
         return parser
 

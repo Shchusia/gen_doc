@@ -96,6 +96,10 @@ class DocGenerator(ABC):
         if not self.path_to_save:
             self.path_to_save = Path(self.directory.name + '_doc')
             self.path_to_save.mkdir(exist_ok=True)
+        elif not os.path.exists(self.path_to_save):
+            self.path_to_save = Path(self.path_to_save)
+            self.path_to_save.mkdir(exist_ok=True)
+
         self.overwrite_if_file_exists = overwrite_if_file_exists
         self.file_to_save = file_to_save
         if not self.file_to_save:
