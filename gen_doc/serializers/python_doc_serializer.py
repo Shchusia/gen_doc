@@ -3,6 +3,7 @@ Module with serializer python files
 """
 # pylint: disable=invalid-name,too-many-statements
 import os
+import traceback
 from collections.abc import Iterable
 from pathlib import Path
 from typing import List, Dict
@@ -74,13 +75,17 @@ class PythonDocSerializer:
                 val = PythonDocSerializer.new_build_type_assigns(assign_data['value'])
             except:
                 val = assign_data['value']
-            if assign_data['type'] == 'str':
-                val = f"'{val}'"
-            elif assigns_data['type'] == 'list':
-                val = f"[{val}]"
+                if not isinstance(assign_data, list):
+                    if assign_data['type'] == 'str':
+                        val = f"'{val}'"
+                    elif assigns_data['type'] == 'list':
+                        val = f"[{val}]"
             row = f"+ `{assign_data['name_variable']}`" \
-                  f"{': ' + PythonDocSerializer.new_build_type_assigns(assign_data['declared_type']) if assign_data.get('declared_type') else ''} = " \
-                  f"{val}: {assign_data['type']}"
+                  f"{': ' + PythonDocSerializer.new_build_type_assigns(assign_data['declared_type']) if assign_data.get('declared_type') else ''}"
+            if val and val != 'None':
+                row += f" = {val}"
+                if assign_data['type'] and assign_data['type'] != 'none':
+                    row += f": {assign_data['type']}"
             documentation.append(row)
         if documentation:
             row = '#' * deep + f' {title}'
@@ -159,7 +164,7 @@ class PythonDocSerializer:
             name = f'Class  `{row}`'
             documentation.append('#' * deep + ' ' + name)
             if class_data.get('doc_string'):
-                documentation.append(f"`{class_data['doc_string']}`")
+                documentation.append(f" ``` \n {class_data['doc_string']}\n ```")
             if class_data.get('decorators'):
                 documentation.extend(PythonDocSerializer.build_decorators(class_data, deep))
             if class_data.get('body'):
@@ -350,6 +355,8 @@ class PythonDocSerializer:
     def build_type(data):
         if isinstance(data, dict):
             _type = data.get('value')
+            if not _type and data.get('declared_type'):
+                return PythonDocSerializer.build_type(data['declared_type'])
             resp = list()
             if data.get('sub_value'):
                 resp = PythonDocSerializer.build_type(data['sub_value'])
@@ -375,15 +382,23 @@ class PythonDocSerializer:
         try:
             if isinstance(data, str):
                 return data
+            if isinstance(data, tuple):
+                if data[1] == 'object':
+                    return data[0]
+                elif data[1] == 'subscript':
+                    return PythonDocSerializer.new_build_type_assigns(data[0])
+
             if not isinstance(data, Iterable):
                 return str(data)
 
             if isinstance(data, list):
-                return "{}".format(','.join(["{}".format(PythonDocSerializer.new_build_type_assigns(d['value']))
-                                             if d['type'] != 'str'
-                                             else "'{}'".format(PythonDocSerializer.new_build_type_assigns(d['value']))
-                                             for d in data]))
+                return "{}".format(', '.join(["{}".format(PythonDocSerializer.new_build_type_assigns(d['value']))
+                                              if d['type'] != 'str'
+                                              else "'{}'".format(PythonDocSerializer.new_build_type_assigns(d['value']))
+                                              for d in data]))
             elif isinstance(data, dict):
+                # if data.get('type') and data['type'] == 'none':
+                #     print('hello')
                 if data.get('type') and data['type'] == 'object':
                     args = ''
                     keywords = ''
@@ -395,10 +410,13 @@ class PythonDocSerializer:
                             _tmp = PythonDocSerializer.new_build_type_assigns(keyword['_value'])
                             tmp.append(f'{keyword["name"]}={_tmp}')
                         if tmp:
-                            keywords = ' ,' + ','.join(tmp)
+                            keywords = ' ,' + ', '.join(tmp)
+                    if data.get('sub_value'):
+                        args = PythonDocSerializer.new_build_type_assigns(data['sub_value'])
 
-                    return f"{data['value']}({args}{keywords})"
+                    return f"{data['value']}[{args}{keywords}]"
                 return str(data)
             return 'unknown'
         except:
+            traceback.print_exc()
             return data

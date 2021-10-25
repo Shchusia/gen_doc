@@ -1,7 +1,7 @@
 """
 Generator documentation for python language
 """
-# pylint: disable=no-else-return,too-many-return-statements
+# pylint: disable=no-else-return,too-many-return-statements,too-many-locals,too-many-branches,bare-except
 from __future__ import annotations
 
 import ast
@@ -246,7 +246,7 @@ class PythonDocGenerator(DocGenerator):
             _value, _type = self._get_value(obj.value)
             try:
                 sub_value, sub_type = self._get_value(obj.slice.value)
-            except:
+            except Exception:
                 sub_value, sub_type = self._get_value(obj.slice)
             data = {
                 'value': _value,
@@ -375,6 +375,7 @@ class PythonDocGenerator(DocGenerator):
                 if not with_assign:
                     continue
             obj_type, object_documentation = self._parse_obj(obj)
+
             if not obj_type:
                 continue
             if obj_type == 'assign' and not with_assign:
@@ -384,6 +385,7 @@ class PythonDocGenerator(DocGenerator):
                                                     object_documentation,
                                                     dict_resp,
                                                     data_body)
+
         return dict_resp
 
     @staticmethod
