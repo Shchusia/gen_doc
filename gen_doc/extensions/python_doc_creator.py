@@ -6,8 +6,11 @@ from __future__ import annotations
 
 import ast
 from ast import stmt
+from enum import Enum
 from pathlib import Path
 from typing import Tuple, Dict, Any, List, Optional
+
+import jsonpickle
 
 from ..doc_creator import DocGenerator
 from ..serializers import PythonDocSerializer
@@ -15,6 +18,22 @@ from ..serializers import PythonDocSerializer
 arguments_to_ignore = [
     'self'
 ]
+
+
+class Operations(Enum):
+    Div = '/'
+    Add = "+"
+    Sub = "-"
+    Mult = "*"
+    MatMult = "@"
+    Mod = "%"
+    Pow = "**"
+    LShift = "<<"
+    RShift = ">>"
+    BitOr = "|"
+    BitXor = "^"
+    BitAnd = "&"
+    FloorDiv = "//"
 
 
 class PythonDocGenerator(DocGenerator):
@@ -230,10 +249,17 @@ class PythonDocGenerator(DocGenerator):
             return obj.id, 'object'
         elif isinstance(obj, ast.NameConstant):
             return self._get_value(obj.value)
-        elif isinstance(obj, ast.Dict):
-            return {self._get_value(key)[0]: self._get_value(value)[0]
-                    for key, value in zip(obj.keys, obj.values)}, 'dict'
-        elif isinstance(obj, (ast.List, ast.Tuple)):
+        elif isinstance(obj, ast.Constant):
+            return self._get_value(obj.value)
+        elif isinstance(obj, (ast.Dict, )):
+            try:
+                return {jsonpickle.dumps(self._get_value(key)[0]): self._get_value(value)[0]
+                        for key, value in zip(obj.keys, obj.values)}, 'dict'
+            except Exception as exc:
+                print(exc)
+                print('unknown value', obj)
+                return "can't parse", 'unknown_val'
+        elif isinstance(obj, (ast.List, ast.Tuple, )):
             resp = list()
             for value in obj.elts:
                 _value, _type = self._get_value(value)
@@ -241,7 +267,8 @@ class PythonDocGenerator(DocGenerator):
                     {
                         'value': _value,
                         'type': _type})
-            return resp, 'list' if isinstance(obj, ast.List) else 'tuple'
+                # print(resp)
+            return (resp, 'list') if isinstance(obj, ast.List) else (tuple(resp), 'tuple')
         elif isinstance(obj, ast.Subscript):
             _value, _type = self._get_value(obj.value)
             try:
@@ -294,9 +321,19 @@ class PythonDocGenerator(DocGenerator):
                 'args': args
             }
             return data, 'object'
+        elif isinstance(obj, ast.BinOp):
+            data = {
+                "left": self._get_value(obj.left),
+                "right": self._get_value(obj.right),
+                "operator": Operations[obj.op.__class__.__name__].value
+            }
+            return data, 'operations'
+        if isinstance(obj, (ast.ListComp, ast.DictComp, ast.SetComp)):
+            # use for generators
+            return ast.unparse(obj), 'object'
         else:
             print('unknown value', obj)
-        return "can't parse", 'unknown'
+        return ast.unparse(obj), 'unknown'
 
     def parse_class(self, obj: stmt) -> Dict:
         """

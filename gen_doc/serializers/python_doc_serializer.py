@@ -8,6 +8,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import List, Dict
 
+import jsonpickle
+
 arguments_to_ignore = [
     'self'
 ]
@@ -78,14 +80,23 @@ class PythonDocSerializer:
                 if not isinstance(assign_data, list):
                     if assign_data['type'] == 'str':
                         val = f"'{val}'"
-                    elif assigns_data['type'] == 'list':
+                    elif assign_data['type'] == 'list':
                         val = f"[{val}]"
+            else:
+                if assign_data['type'] == 'str':
+                    val = f"'{val}'"
+                elif assign_data['type'] == 'list':
+                    val = f"[{val}]"
+
             row = f"+ `{assign_data['name_variable']}`" \
                   f"{': ' + PythonDocSerializer.new_build_type_assigns(assign_data['declared_type']) if assign_data.get('declared_type') else ''}"
+
             if val and val != 'None':
                 row += f" = {val}"
-                if assign_data['type'] and assign_data['type'] != 'none':
+
+                if assign_data['type'] and assign_data['type'] not in ['none', "operations"]:
                     row += f": {assign_data['type']}"
+
             documentation.append(row)
         if documentation:
             row = '#' * deep + f' {title}'
@@ -381,12 +392,26 @@ class PythonDocSerializer:
         """
         try:
             if isinstance(data, str):
+
                 return data
             if isinstance(data, tuple):
-                if data[1] == 'object':
-                    return data[0]
-                elif data[1] == 'subscript':
-                    return PythonDocSerializer.new_build_type_assigns(data[0])
+                try:
+                    if len(data) == 1:
+                        return PythonDocSerializer.new_build_type_assigns(data[0])
+                    if data[1] == 'object':
+                        return data[0]
+                    if data[1] == 'str':
+                        return f'"{data[0]}"'
+                    elif data[1] == 'subscript':
+                        return PythonDocSerializer.new_build_type_assigns(data[0])
+                    else:
+                        res = list()
+                        for row in data:
+                            res.append(PythonDocSerializer.new_build_type_assigns(row))
+                        return f"({', '.join(res)})"
+                except Exception as exc:
+                    traceback.print_exc()
+                    return 'unknown'
 
             if not isinstance(data, Iterable):
                 return str(data)
@@ -397,8 +422,10 @@ class PythonDocSerializer:
                                               else "'{}'".format(PythonDocSerializer.new_build_type_assigns(d['value']))
                                               for d in data]))
             elif isinstance(data, dict):
-                # if data.get('type') and data['type'] == 'none':
-                #     print('hello')
+                if data.get("operator"):
+                    return f"{ PythonDocSerializer.new_build_type_assigns(data['left'])}" \
+                           f" {data['operator']} " \
+                           f"{ PythonDocSerializer.new_build_type_assigns(data['right'])}"
                 if data.get('type') and data['type'] == 'object':
                     args = ''
                     keywords = ''
@@ -414,8 +441,23 @@ class PythonDocSerializer:
                     if data.get('sub_value'):
                         args = PythonDocSerializer.new_build_type_assigns(data['sub_value'])
 
-                    return f"{data['value']}[{args}{keywords}]"
+                    return f"{data['value']}({args}{keywords})"
+                if data.get('type') and data['type'] in ('str', "num", "tuple"):
+
+                    return f"{PythonDocSerializer.new_build_type_assigns(data['value'])}"
+                if data.get('type') and data['type'] == 'operations':
+                    return ' '
+                try:
+                    res = ''
+                    for key, value in data.items():
+                        reformation_key = PythonDocSerializer.new_build_type_assigns(jsonpickle.loads(key))
+                        reformation_value = PythonDocSerializer.new_build_type_assigns(value)
+                        res += f'{reformation_key}: {reformation_value},\n'
+                    return f'{{ {res} }}'
+                except Exception as exc:
+                    traceback.format_exc()
                 return str(data)
+
             return 'unknown'
         except:
             traceback.print_exc()
