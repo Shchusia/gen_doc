@@ -333,7 +333,10 @@ class PythonDocGenerator(DocGenerator):
             return ast.unparse(obj), 'object'
         else:
             print('unknown value', obj)
-        return ast.unparse(obj), 'unknown'
+        try:
+            return ast.unparse(obj), 'unknown'
+        except:
+            return str(obj), 'unknown'
 
     def parse_class(self, obj: stmt) -> Dict:
         """
